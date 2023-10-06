@@ -1,8 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:untitled/home/home_page.dart';
 import 'package:untitled/home/home_page.dart';
 import 'package:untitled/index/index.dart';
 
+
 void main() {
+  // SystemChrome.setPreferredOrientations([
+  //   DeviceOrientation.portraitUp, // 竖屏
+  //   DeviceOrientation.landscapeLeft, // 横屏
+  //   DeviceOrientation.landscapeRight, // 横屏
+  // ]);
+  WidgetsFlutterBinding.ensureInitialized(); //不加这个强制横/竖屏会报错
+  SystemChrome.setPreferredOrientations([
+    // 强制竖屏
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown
+  ]);
   runApp(MyApp());
 }
 
@@ -10,10 +24,18 @@ class MyApp extends StatelessWidget {
 // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return new MaterialApp(
-      title: 'Flutter Demo',
-      home: new Index(),  // 指定去加载 Index页面。
+    return OrientationBuilder(
+      builder: (BuildContext context, Orientation orientation) {
+        print("当前屏幕的方向是：$orientation");
+        return new MaterialApp(
+          title: 'Flutter Demo',
+          home: new ImageSlideshow(),  // 指定去加载 Index页面。
+        );
+      },
     );
+
+
+
   }
 }
 

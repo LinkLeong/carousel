@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:untitled/NoticePage/notice_page.dart';
 import 'package:untitled/home/t3.dart';
+import 'package:untitled/home/home_page.dart';
 
 // import 'package:untitled/idea/idea_page.dart';
 // import 'package:untitled/market/market_page.dart';
@@ -53,7 +54,8 @@ class _IndexState extends State<Index> with TickerProviderStateMixin {
     }
 // 将我们 bottomBar 上面的按钮图标对应的页面存放起来，方便我们在点击的时候
     _pageList = <StatefulWidget>[
-      ImageViewer(),
+      ImageSlideshow(),
+      //ImageViewer(),
       // IdeaPage(),
       // MarketPage(),
       // NoticePage(),

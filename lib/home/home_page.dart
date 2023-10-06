@@ -4,17 +4,24 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:untitled/home/full_image.dart';
 import 'package:http/http.dart' as http;
+import 'package:cached_network_image/cached_network_image.dart';
+
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:video_player/video_player.dart';
+import 'dart:typed_data';
+import 'dart:convert';
+
 
 class ImageSlideshow extends StatefulWidget {
-  final List<String> imageUrls;
 
-  ImageSlideshow(this.imageUrls);
 
   @override
   _ImageSlideshowState createState() => _ImageSlideshowState();
 }
 
 class _ImageSlideshowState extends State<ImageSlideshow> {
+  List<String> urls = ["http://192.168.2.193:8082/v1/file?path=/images/IMG_20230916_150554.jpg"];
   int currentIndex = 0;
   bool imagesLoaded = false;
 
@@ -22,16 +29,27 @@ class _ImageSlideshowState extends State<ImageSlideshow> {
 
   @override
   void initState() {
+    _loadUrls();
+
     super.initState();
-    if (imageCache.containsKey(widget.imageUrls[currentIndex])) {
-      imageCache.remove(widget.imageUrls[currentIndex]);
-    }
-    currentIndex = (currentIndex + 1) % widget.imageUrls.length;
-    loadImageSync(widget.imageUrls[currentIndex]);
+    // if (imageCache.containsKey(urls[currentIndex])) {
+    //   imageCache.remove(urls[currentIndex]);
+    // }
+    // currentIndex = (currentIndex + 1) % urls.length;
+    //loadImageSync(urls[currentIndex]);
     print("当前:${currentIndex}");
-    print("图片长度：${widget.imageUrls.length}");
+    print("图片长度：${urls.length}");
     // 开启轮播
     startSlideshow();
+  }
+
+  void _loadUrls() async {
+    final response = await http.get(Uri.parse('http://192.168.2.193:8082/v1/files'));
+    final us = jsonDecode(response.body).cast<String>();
+    await Future.delayed(Duration.zero);
+    setState(() {
+      urls = us;
+    });
   }
 
   @override
@@ -69,16 +87,19 @@ class _ImageSlideshowState extends State<ImageSlideshow> {
 
   // 开启轮播
   void startSlideshow() {
-    Timer.periodic(Duration(seconds: 5), (timer) {
+    Timer.periodic(Duration(seconds: 20), (timer) {
       if (mounted) {
         setState(() {
-          if (imageCache.containsKey(widget.imageUrls[currentIndex])) {
-            imageCache.remove(widget.imageUrls[currentIndex]);
+          if (imageCache.containsKey(urls[currentIndex])) {
+            imageCache.remove(urls[currentIndex]);
           }
-          currentIndex = (currentIndex + 1) % widget.imageUrls.length;
-          loadImage(widget.imageUrls[currentIndex]);
+          currentIndex = (currentIndex + 1) % urls.length;
+          if(currentIndex+1==urls.length){
+            _loadUrls();
+          }
+          loadImage(urls[currentIndex]);
           print("当前:${currentIndex}");
-          print("图片长度：${widget.imageUrls.length}");
+          print("图片长度：${urls.length}");
         });
       }
     });
@@ -92,10 +113,10 @@ class _ImageSlideshowState extends State<ImageSlideshow> {
   }
 
   GetImg() {
-    if (widget.imageUrls.isNotEmpty&&imageCache.isNotEmpty) {
-      return imageCache[widget.imageUrls[currentIndex]]!;
+    if (urls.isNotEmpty&&imageCache.isNotEmpty) {
+      return imageCache[urls[currentIndex]]!;
     }
-    return Text("data");
+    return imageCache[urls[currentIndex]]!;
   }
 
   @override
@@ -103,26 +124,26 @@ class _ImageSlideshowState extends State<ImageSlideshow> {
     if (widget == null) return Container();
     return Scaffold(
       body: PageView.builder(
-        itemCount: widget.imageUrls.length,
+        itemCount: urls.length,
         controller: PageController(initialPage: currentIndex),
         onPageChanged: (int index) => setState(() => currentIndex = index),
         itemBuilder: (_, i) {
           print("索引：${i}");
-          // return  Image.network(
-          //   widget.imageUrls[i],
-          //   fit: BoxFit.cover,
-          //
-          // );
-          return GestureDetector(
-              onTap: () {
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        fullscreenDialog: true, //全屏
-                        builder: (_) => FullScreenImagePage(
-                            imageUrl: widget.imageUrls[i])));
-              },
-              child: Image(image: GetImg()));
+          return  Image.network(
+            urls[currentIndex],
+            fit: BoxFit.contain,
+
+          );
+          // return GestureDetector(
+          //     onTap: () {
+          //       Navigator.push(
+          //           context,
+          //           MaterialPageRoute(
+          //               fullscreenDialog: true, //全屏
+          //               builder: (_) => FullScreenImagePage(
+          //                   imageUrl: "http://192.168.2.193:8082/v1/file?path=${urls[i]}")));
+          //     },
+          //     child: Image(image: GetImg()));
         },
       ),
     );

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:ffi';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -7,6 +8,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
+import 'package:http/http.dart' as http;
 
 class ImageViewer extends StatefulWidget {
   @override
@@ -16,13 +18,7 @@ class ImageViewer extends StatefulWidget {
 }
 
 class ImageViewerState extends State<ImageViewer> {
-  List<String> urls = [
-    'https://img0.baidu.com/it/u=3367946648,1557880515&fm=253&fmt=auto&app=138&f=JPEG?w=889&h=500',
-    'https://www.w3school.com.cn/example/html5/mov_bbb.mp4',
-    'https://img2.baidu.com/it/u=3369768849,1534109460&fm=253&fmt=auto&app=120&f=JPEG?w=1422&h=800',
-    'https://img2.baidu.com/it/u=3611151199,133363241&fm=253&fmt=auto&app=120&f=JPEG?w=1280&h=800',
-    'https://i.pinimg.com/originals/85/03/93/85039311ce13e7cfd824e155a376003d.png'
-  ];
+  List<String> urls = [];
   int index = 0;
   VideoPlayerController? _controller;
   Uint8List? imageBytesList;
@@ -30,12 +26,14 @@ class ImageViewerState extends State<ImageViewer> {
   @override
   void initState() {
     super.initState();
-    loadAsset(urls[index]);
-
+    _loadUrls();
+//    loadAsset(urls[index]);
     Timer.periodic(Duration(seconds: 5), (timer) {
-      index++;
-      if (index >= urls.length) index = 0;
-      loadAsset(urls[index]);
+      if (urls.isNotEmpty){
+        index++;
+        if (index >= urls.length) index = 0;
+        loadAsset(urls[index]);
+      }
       // downloadImageBytes(urls[aaa]).then((value) {
       //   setState(() {
       //     this.imageBytesList = value;
@@ -44,7 +42,14 @@ class ImageViewerState extends State<ImageViewer> {
       // aaa++;
     });
   }
-
+  void _loadUrls() async {
+    final response = await http.get(Uri.parse('http://192.168.2.193:8082/v1/files'));
+    final u = jsonDecode(response.body).cast<String>();
+    await Future.delayed(Duration.zero);
+    setState(() {
+      this.urls = u;
+    });
+  }
   @override
   void dispose() {
     _controller?.dispose();
@@ -54,26 +59,42 @@ class ImageViewerState extends State<ImageViewer> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text("显示加载的图片"),
+      // appBar: AppBar(
+      //   title: Text("显示加载的图片"),
+      // ),
+      // body: Container(
+      //     // height: double.infinity,
+      //     // width: double.infinity,
+      //     child: imageBytesList != null
+      //         ? urls[index].endsWith(".mp4")
+      //             ? AspectRatio(
+      //                 aspectRatio: _controller!.value.aspectRatio,
+      //                 child: VideoPlayer(_controller!),
+      //               )
+      //             : Image.memory(imageBytesList!)
+      //         : Container()),
+      body: urls.isEmpty
+          ? Center(child: CircularProgressIndicator())
+          : FutureBuilder(
+        future: downloadImageBytes(urls[index]),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.done) {
+            if (snapshot.hasData) {
+              return Image.memory(snapshot.data!);
+            } else {
+              return Text('Error: ${snapshot.error}');
+            }
+          } else {
+            return CircularProgressIndicator();
+          }
+        },
       ),
-      body: Container(
-          // height: double.infinity,
-          // width: double.infinity,
-          child: imageBytesList != null
-              ? urls[index].endsWith(".mp4")
-                  ? AspectRatio(
-                      aspectRatio: _controller!.value.aspectRatio,
-                      child: VideoPlayer(_controller!),
-                    )
-                  : Image.memory(imageBytesList!)
-              : Container()),
     );
   }
 
   void loadAsset(String url) async {
     if (url.endsWith(".mp4")) {
-      Uri u = Uri.parse(url);
+      Uri u = Uri.parse( url);
       _controller = VideoPlayerController.networkUrl(u)
         ..initialize().then((_) {
           setState(() {});
@@ -84,6 +105,7 @@ class ImageViewerState extends State<ImageViewer> {
     } else {
       downloadImageBytes(url).then((value) {
         setState(() {
+          print("下载$url完成");
           imageBytesList = value;
         });
       });
@@ -91,6 +113,7 @@ class ImageViewerState extends State<ImageViewer> {
   }
 
   Future<Uint8List?> downloadImageBytes(String url) async {
+    url="http://192.168.2.193:8082/v1/file?path=$url";
     var uiImage = await loadImage(url);
     var pngBytes = await uiImage.toByteData(format: ui.ImageByteFormat.png);
     if (pngBytes != null) {
